@@ -367,3 +367,6 @@ exports.resetPassword = async (req, res, next) => {
     next(err);
   }
 };
+
+// user controller
+// const User = require("../models/user.model");

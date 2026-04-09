@@ -26,44 +26,48 @@ exports.deleteUser = async (req, res, next) => {
 
 
 // --- GET ALL USERS (ADMIN) ---
+
+// GET ALL USERS (Admin Only) - Production Ready
 exports.getAllUsers = async (req, res, next) => {
   try {
-    const requester = req.user;
+    // ✅ Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    // 🔐 Only admin allowed
-    if (requester.role !== "admin") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    // Optional query params
-    const { page = 1, limit = 10, search } = req.query;
-
+    // ✅ Optional filtering by role or verification status
+    const { role, isVerified, search } = req.query;
     const query = {};
 
-    // 🔍 Search by name or email
+    if (role) query.role = role.toLowerCase();
+    if (isVerified !== undefined) query.isVerified = isVerified === "true";
+
     if (search) {
+      // ✅ Search by name or email (case-insensitive)
       query.$or = [
         { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } }
+        { email: { $regex: search, $options: "i" } },
       ];
     }
 
+    // ✅ Total count for pagination
+    const totalUsers = await User.countDocuments(query);
+
+    // ✅ Fetch users with pagination
     const users = await User.find(query)
-      .select("-password -refreshToken -otp -verificationToken") // hide sensitive data
-      .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
+      .select("-password -otp -otpExpire -resetToken -resetTokenExpire -refreshToken") // hide sensitive fields
+      .sort({ createdAt: -1 }) // latest users first
+      .skip(skip)
+      .limit(limit);
 
-    const total = await User.countDocuments(query);
-
-    res.json({
+    res.status(200).json({
       success: true,
-      total,
-      page: Number(page),
-      limit: Number(limit),
+      page,
+      limit,
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / limit),
       users,
     });
-
   } catch (err) {
     next(err);
   }
