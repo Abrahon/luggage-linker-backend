@@ -6,8 +6,9 @@ const nodemailer = require("nodemailer");
 const { validationResult } = require("express-validator");
 const generateAccessToken = require("../../src/utils/generateAccessToken");
 const generateRefreshToken = require("../../src/utils/generateRefreshToken");
-// const crypto = require("crypto");
-// const bcrypt = require("bcryptjs");
+// const sendOtpEmail = require("../../src/utils/emailTemplates" );
+const { sendOtpEmail } = require("../utils/emailTemplates");
+
 
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
@@ -74,11 +75,11 @@ exports.signup = async (req, res, next) => {
 
     // 🔥 Send OTP Email
     await transporter.sendMail({
+      from: `"LuggageLinker" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Verify Your Account - OTP",
-      html: `<h2>Your OTP is: ${otp}</h2><p>Valid for 10 minutes</p>`,
+      html: sendOtpEmail(name, otp), // ✅ TEMPLATE USED HERE
     });
-
     res.status(201).json({
       message: "OTP sent to email. Please verify your account.",
       email: user.email,
@@ -126,6 +127,8 @@ exports.verifyEmail = async (req, res, next) => {
     next(err);
   }
 };
+
+
 
 // resend otp
 exports.resendOTP = async (req, res, next) => {
@@ -209,6 +212,8 @@ exports.login = async (req, res, next) => {
   }
 };
 
+
+
 // --- REFRESH TOKEN ---
 exports.refreshToken = async (req, res, next) => {
   try {
@@ -232,6 +237,8 @@ exports.refreshToken = async (req, res, next) => {
     next(err);
   }
 };
+
+
 
 // --- LOGOUT ---
 exports.logout = async (req, res, next) => {
@@ -277,48 +284,89 @@ exports.forgotPassword = async (req, res, next) => {
 // --- VERIFY OTP ---
 
 
+// exports.verifyOTP = async (req, res, next) => {
+//   try {
+//     const { email, otp } = req.body;
+
+//     const user = await User.findOne({ email });
+
+//     if (!user || !user.otp || user.otpExpire < Date.now()) {
+//       return res.status(400).json({
+//         message: "OTP expired or invalid",
+//       });
+//     }
+
+//     const isMatch = await bcrypt.compare(otp, user.otp);
+
+//     if (!isMatch) {
+//       return res.status(400).json({
+//         message: "Invalid OTP",
+//       });
+//     }
+
+//     // ✅ GENERATE RESET TOKEN (THIS IS MISSING IN YOUR CODE)
+//     const resetToken = crypto.randomBytes(32).toString("hex");
+
+//     user.resetToken = resetToken;
+//     user.resetTokenExpire = Date.now() + 10 * 60 * 1000; // 10 min
+
+//     // ✅ CLEAR OTP AFTER SUCCESS
+//     user.otp = null;
+//     user.otpExpire = null;
+
+//     await user.save();
+
+//     // ✅ SEND TOKEN IN RESPONSE
+//     res.json({
+//       message: "OTP verified successfully",
+//       resetToken, // 🔥 IMPORTANT
+//     });
+
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
 exports.verifyOTP = async (req, res, next) => {
   try {
     const { email, otp } = req.body;
 
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP required" });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user || !user.otp || user.otpExpire < Date.now()) {
-      return res.status(400).json({
-        message: "OTP expired or invalid",
-      });
+      return res.status(400).json({ message: "OTP expired or invalid" });
     }
 
     const isMatch = await bcrypt.compare(otp, user.otp);
 
     if (!isMatch) {
-      return res.status(400).json({
-        message: "Invalid OTP",
-      });
+      return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    // ✅ GENERATE RESET TOKEN (THIS IS MISSING IN YOUR CODE)
     const resetToken = crypto.randomBytes(32).toString("hex");
 
     user.resetToken = resetToken;
-    user.resetTokenExpire = Date.now() + 10 * 60 * 1000; // 10 min
+    user.resetTokenExpire = Date.now() + 10 * 60 * 1000;
 
-    // ✅ CLEAR OTP AFTER SUCCESS
     user.otp = null;
     user.otpExpire = null;
 
     await user.save();
 
-    // ✅ SEND TOKEN IN RESPONSE
     res.json({
       message: "OTP verified successfully",
-      resetToken, // 🔥 IMPORTANT
+      resetToken,
     });
 
   } catch (err) {
     next(err);
   }
 };
+
 
 // --- RESET PASSWORD ---
 
