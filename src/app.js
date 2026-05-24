@@ -55,6 +55,8 @@ app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/users", require("./routes/user.routes"));
 app.use("/api/profile", require("./routes/profile.routes"));
 app.use("/api/dashboard", require("./routes/dashboard.routes"));
+app.use("/api/trip", require("./routes/trip.routes"));
+app.use("/api/booking", require("./routes/booking.routes"));
 
 // --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {

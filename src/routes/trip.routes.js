@@ -5,13 +5,14 @@ const tripController = require("../controllers/trip.controller");
 const auth = require("../middlewares/auth.middleware");
 
 // ➕ CREATE
-router.post("/", auth, tripController.createTrip);
+router.post("/add", auth, tripController.createTrip);
 
 // 📋 GET ALL
-router.get("/", tripController.getAllTrips);
+router.get("/list", tripController.getAllTrips);
 
 // 👤 GET SINGLE
-router.get("/:id", tripController.getTripById);
+router.get("/list/:id", tripController.getTripById);
+// console.log("🚀 Trip routes loaded");
 
 // ✏️ UPDATE
 router.put("/:id", auth, tripController.updateTrip);

@@ -1,6 +1,9 @@
 const Trip = require("../models/trip.model");
 
 // ➕ CREATE TRIP
+
+const Location = require("../models/location.model");
+
 exports.createTrip = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -16,17 +19,25 @@ exports.createTrip = async (req, res, next) => {
       pricePerKg,
     } = req.body;
 
-    // ✅ validation
-    if (!origin || !destination || !departureDate || !luggageCapacityKg) {
-      return res.status(400).json({
-        message: "Required fields missing",
-      });
+    // ❌ STEP 1: find or create origin
+    let originLocation = await Location.findOne({ name: origin });
+
+    if (!originLocation) {
+      originLocation = await Location.create({ name: origin });
     }
 
+    // ❌ STEP 2: find or create destination
+    let destinationLocation = await Location.findOne({ name: destination });
+
+    if (!destinationLocation) {
+      destinationLocation = await Location.create({ name: destination });
+    }
+
+    // ✅ STEP 3: NOW use ObjectIds
     const trip = await Trip.create({
       traveler: userId,
-      origin,
-      destination,
+      origin: originLocation._id,
+      destination: destinationLocation._id,
       departureDate,
       arrivalDate,
       luggageCapacityKg,
@@ -34,7 +45,6 @@ exports.createTrip = async (req, res, next) => {
       note,
       pricePerKg,
       status: "OPEN",
-      isActive: true,
     });
 
     res.status(201).json({
@@ -45,7 +55,6 @@ exports.createTrip = async (req, res, next) => {
     next(err);
   }
 };
-
 
 // trip mlist
 exports.getAllTrips = async (req, res, next) => {
