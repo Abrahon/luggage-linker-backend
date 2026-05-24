@@ -168,7 +168,7 @@ app.use(
 app.use(
   "/api/v1/memberships",
   require(
-    "./modules/membership/routes/membership.routes"
+    "./routes/membership.routes"
   )
 );
 

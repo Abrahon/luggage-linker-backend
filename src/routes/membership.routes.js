@@ -4,9 +4,8 @@ const router = express.Router();
 
 const membershipController = require("../controllers/membership.controller");
 
-const authMiddleware = require("../../middlewares/auth.middleware");
-
-const adminMiddleware = require("../../middlewares/admin.middleware");
+const authMiddleware = require("../middlewares/auth.middleware");
+const adminMiddleware = require("../middlewares/admin.middleware");
 
 // ======================================
 // PUBLIC

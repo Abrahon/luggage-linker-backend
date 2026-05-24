@@ -1,8 +1,7 @@
+
 const MembershipPlan = require("../models/membershipPlan.model");
-
 const Subscription = require("../models/subscription.model");
-
-const User = require("../../user/models/user.model");
+const User = require("../models/user.model");
 
 // ======================================
 // GET ALL PLANS
