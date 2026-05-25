@@ -34,46 +34,120 @@ exports.getProfile = async (req, res, next) => {
 
 
 
-exports.updateProfile = async (req, res, next) => {
+exports.updateProfile = async (
+  req,
+  res,
+  next
+) => {
   try {
     const userId = req.user.id;
 
-    const { name } = req.body;
-    const file = req.file;
+    const {
+      firstName,
+      lastName,
+      bio,
+      city,
+      country,
+    } = req.body;
 
-    const profile = await Profile.findOne({ user: userId });
+    const updatedFields = {};
 
-    if (!profile) {
-      return res.status(404).json({ message: "Profile not found" });
-    }
+    // =========================
+    // FIND USER
+    // =========================
 
-    // ✅ update name
-    if (name) {
-      profile.name = name;
-    }
+    const user = await User.findById(
+      userId
+    );
 
-    // ✅ upload image to cloudinary
-    if (file) {
-      const result = await new Promise((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            { folder: "luggage-linker/profiles" },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          )
-          .end(file.buffer);
+    const profile =
+      await Profile.findOne({
+        user: userId,
       });
 
-      profile.profilePhoto = result.secure_url;
+    if (!user || !profile) {
+      return res.status(404).json({
+        message:
+          "User/Profile not found",
+      });
     }
+
+    // =========================
+    // UPDATE USER
+    // =========================
+
+    if (firstName) {
+      user.firstName = firstName;
+
+      updatedFields.firstName =
+        firstName;
+    }
+
+    if (lastName) {
+      user.lastName = lastName;
+
+      updatedFields.lastName =
+        lastName;
+    }
+
+    if (city) {
+      user.city = city;
+
+      updatedFields.city = city;
+    }
+
+    if (country) {
+      user.country = country;
+
+      updatedFields.country =
+        country;
+    }
+
+    // =========================
+    // UPDATE PROFILE
+    // =========================
+
+    if (bio) {
+      profile.bio = bio;
+
+      updatedFields.bio = bio;
+    }
+
+    // =========================
+    // PROFILE PHOTO
+    // =========================
+
+    if (req.file) {
+      const result =
+        await cloudinary.uploader.upload(
+          req.file.path
+        );
+
+      profile.profilePhoto =
+        result.secure_url;
+
+      updatedFields.profilePhoto =
+        result.secure_url;
+    }
+
+    // =========================
+    // SAVE
+    // =========================
+
+    await user.save();
 
     await profile.save();
 
-    res.json({
-      message: "Profile updated successfully",
-      profile,
+    // =========================
+    // RESPONSE
+    // =========================
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Profile updated successfully",
+
+      updatedFields,
     });
   } catch (err) {
     next(err);

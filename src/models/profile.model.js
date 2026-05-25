@@ -2,7 +2,10 @@ const mongoose = require("mongoose");
 
 const profileSchema = new mongoose.Schema(
   {
-    // 👤 LINK TO USER
+    // =====================================
+    // USER REFERENCE
+    // =====================================
+
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -10,26 +13,27 @@ const profileSchema = new mongoose.Schema(
       unique: true,
     },
 
-    // 👤 BASIC PROFILE INFO
-    name: {
-      type: String,
-      trim: true,
-    },
-
-    email: {
-      type: String,
-      trim: true,
-      lowercase: true,
-    },
+    // =====================================
+    // PROFILE MEDIA
+    // =====================================
 
     profilePhoto: {
-      type: String, // URL (Cloudinary / S3 / local)
+      type: String,
       default: "",
     },
 
+    coverPhoto: {
+      type: String,
+      default: "",
+    },
+
+    // =====================================
+    // PERSONAL INFO
+    // =====================================
+
     bio: {
       type: String,
-      maxlength: 250,
+      maxlength: 500,
       default: "",
     },
 
@@ -43,7 +47,6 @@ const profileSchema = new mongoose.Schema(
       default: "",
     },
 
-    // 📊 EXTRA INFO (OPTIONAL)
     gender: {
       type: String,
       enum: ["male", "female", "other"],
@@ -52,8 +55,56 @@ const profileSchema = new mongoose.Schema(
     dateOfBirth: {
       type: Date,
     },
+
+    // =====================================
+    // TRAVELER DETAILS
+    // =====================================
+
+    languages: [
+      {
+        type: String,
+      },
+    ],
+
+    preferredAirlines: [
+      {
+        type: String,
+      },
+    ],
+
+    preferredAirports: [
+      {
+        type: String,
+      },
+    ],
+
+    // =====================================
+    // SOCIAL LINKS
+    // =====================================
+
+    socialLinks: {
+      facebook: String,
+      instagram: String,
+      linkedin: String,
+      telegram: String,
+    },
+
+    // =====================================
+    // EMERGENCY CONTACT
+    // =====================================
+
+    emergencyContact: {
+      name: String,
+      phone: String,
+      relation: String,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-module.exports = mongoose.model("Profile", profileSchema);
+module.exports = mongoose.model(
+  "Profile",
+  profileSchema
+);

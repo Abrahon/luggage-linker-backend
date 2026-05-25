@@ -13,5 +13,6 @@ router.post("/verify-otp", auth.verifyOTP);
 router.post("/reset-password", auth.resetPassword);
 router.post("/resend-otp", auth.resendOTP);
 // router.get("/user-list", auth.getAllUsers);
+console.log("🟢 AUTH ROUTES FILE LOADED");
 
 module.exports = router;

@@ -19,51 +19,91 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+
 exports.signup = async (req, res, next) => {
   try {
     if (!req.body) {
       return res.status(400).json({ message: "No data provided" });
     }
 
-    const { name, email, password, confirmPassword, role } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+      role,
+    } = req.body;
 
-    if (!name || !email || !password || !confirmPassword) {
-      return res.status(400).json({ message: "All fields are required" });
+    // ===============================
+    // VALIDATION
+    // ===============================
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !password ||
+      !confirmPassword
+    ) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
     }
 
     if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
+      return res.status(400).json({
+        message: "Passwords do not match",
+      });
     }
 
+    // ===============================
+    // CHECK EXISTING USER
+    // ===============================
     const existingUser = await User.findOne({ email });
 
-    // 🔥 CASE 1: Email exists & VERIFIED
     if (existingUser && existingUser.isVerified) {
-      return res.status(409).json({ message: "Email already registered" });
+      return res.status(409).json({
+        message: "Email already registered",
+      });
     }
 
+    // ===============================
+    // HASH PASSWORD
+    // ===============================
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔥 Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // ===============================
+    // OTP GENERATION
+    // ===============================
+    const otp = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+
     const hashedOTP = await bcrypt.hash(otp, 10);
 
     let user;
 
-    // 🔥 CASE 2: Email exists but NOT VERIFIED → UPDATE
+    // ===============================
+    // UPDATE UNVERIFIED USER
+    // ===============================
     if (existingUser && !existingUser.isVerified) {
-      existingUser.name = name;
+      existingUser.firstName = firstName;
+      existingUser.lastName = lastName;
       existingUser.password = hashedPassword;
       existingUser.role = role || "sender";
       existingUser.otp = hashedOTP;
       existingUser.otpExpire = Date.now() + 10 * 60 * 1000;
 
       user = await existingUser.save();
-    } 
-    // 🔥 CASE 3: New user → CREATE
+    }
+
+    // ===============================
+    // CREATE NEW USER
+    // ===============================
     else {
       user = await User.create({
-        name,
+        firstName,
+        lastName,
         email,
         password: hashedPassword,
         role: role || "sender",
@@ -73,18 +113,23 @@ exports.signup = async (req, res, next) => {
       });
     }
 
-    // 🔥 Send OTP Email
+    // ===============================
+    // SEND OTP EMAIL
+    // ===============================
     await transporter.sendMail({
       from: `"LuggageLinker" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Verify Your Account - OTP",
-      html: sendOtpEmail(name, otp), // ✅ TEMPLATE USED HERE
+      html: sendOtpEmail(firstName, otp),
     });
+
+    // ===============================
+    // RESPONSE
+    // ===============================
     res.status(201).json({
       message: "OTP sent to email. Please verify your account.",
       email: user.email,
     });
-
   } catch (err) {
     console.error("Signup error:", err);
     next(err);
@@ -96,38 +141,84 @@ exports.verifyEmail = async (req, res, next) => {
   try {
     const { email, otp } = req.body;
 
+    // =========================
+    // VALIDATION
+    // =========================
     if (!email || !otp) {
-      return res.status(400).json({ message: "Email and OTP required" });
+      return res.status(400).json({
+        message: "Email and OTP required",
+      });
     }
 
+    // =========================
+    // FIND USER
+    // =========================
     const user = await User.findOne({ email });
 
-    if (!user || !user.otp || user.otpExpire < Date.now()) {
-      return res.status(400).json({ message: "OTP expired or invalid" });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
-    const isMatch = await bcrypt.compare(otp, user.otp);
+    // =========================
+    // CHECK OTP EXISTS
+    // =========================
+    if (!user.otp || !user.otpExpire) {
+      return res.status(400).json({
+        message: "OTP not found",
+      });
+    }
+
+    // =========================
+    // CHECK OTP EXPIRATION
+    // =========================
+    if (user.otpExpire < Date.now()) {
+      return res.status(400).json({
+        message: "OTP expired",
+      });
+    }
+
+    // =========================
+    // VERIFY OTP
+    // =========================
+    const isMatch = await bcrypt.compare(
+      otp,
+      user.otp
+    );
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({
+        message: "Invalid OTP",
+      });
     }
 
-    // ✅ Verify user
-    user.isVerified = true;
+    // =========================
+    // VERIFY USER
+    // =========================
+    user.isEmailVerified = true;
+
+    user.verificationStatus = "verified";
+
     user.otp = null;
     user.otpExpire = null;
 
     await user.save();
 
-    res.json({
-      message: "Account verified successfully. You can now login.",
+    // =========================
+    // RESPONSE
+    // =========================
+    res.status(200).json({
+      success: true,
+      message:
+        "Account verified successfully. You can now login.",
     });
-
   } catch (err) {
+    console.error("VERIFY EMAIL ERROR:", err);
+
     next(err);
   }
 };
-
 
 
 // resend otp
@@ -179,8 +270,11 @@ exports.login = async (req, res, next) => {
     console.log("Found user:", user);
 
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
-    if (!user.isVerified)
-      return res.status(403).json({ message: "Please verify your email first." });
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        message: "Please verify your email first.",
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     console.log("Password match:", isMatch);
