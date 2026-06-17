@@ -29,7 +29,7 @@ app.use("/api/profile", require("./routes/profile.routes"));
 app.use("/api/dashboard", require("./routes/dashboard.routes"));
 app.use("/api/trip", require("./routes/trip.routes"));
 app.use("/api/booking", require("./routes/booking.routes"));
-app.use("/api/membership", require("./routes/membership.routes"));
+app.use("/api/memberships", require("./routes/membership.routes"));
 // app.use("/api/payment", require("./routes/payment.routes"));
 // app.use("/api/notification", require("./routes/notification.routes"));
 

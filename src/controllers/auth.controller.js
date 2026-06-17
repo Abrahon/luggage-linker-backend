@@ -259,17 +259,15 @@ exports.resendOTP = async (req, res, next) => {
 
 
 // --- LOGIN ---
-
 exports.login = async (req, res, next) => {
   try {
-    console.log("Login body:", req.body);
-
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    console.log("Found user:", user);
 
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user)
+      return res.status(400).json({ message: "Invalid credentials" });
+
     if (!user.isEmailVerified) {
       return res.status(403).json({
         message: "Please verify your email first.",
@@ -277,19 +275,16 @@ exports.login = async (req, res, next) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match:", isMatch);
 
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    console.log("JWT ACCESS SECRET:", process.env.JWT_ACCESS_SECRET);
-    console.log("JWT REFRESH SECRET:", process.env.JWT_REFRESH_SECRET);
+    // update last login
+    user.lastLogin = new Date();
+    await user.save();
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-
-    console.log("AccessToken generated:", accessToken);
-    console.log("RefreshToken generated:", refreshToken);
 
     user.refreshToken = refreshToken;
     await user.save();
@@ -298,10 +293,19 @@ exports.login = async (req, res, next) => {
       message: "Login successful",
       accessToken,
       refreshToken,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: {
+        id: user._id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role,
+        plan: user.plan,
+        isVerified: user.isEmailVerified,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+      },
     });
   } catch (err) {
-    console.error("🔥 LOGIN ERROR:", err);
+    console.error("LOGIN ERROR:", err);
     next(err);
   }
 };

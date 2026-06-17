@@ -1,8 +1,8 @@
-const bcrypt = require("bcryptjs");
 require("dotenv").config();
+const bcrypt = require("bcryptjs");
 
-const connectDB = require("../config/db");   // ✅ one level up
-const User = require("../models/user.model"); // ✅ one level up
+const connectDB = require("../config/db");
+const User = require("../models/user.model");
 
 const createAdmin = async () => {
   try {
@@ -21,15 +21,14 @@ const createAdmin = async () => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const admin = await User.create({
-      name: "Super Admin",
+      firstName: "Super",
+      lastName: "Admin",
       email,
       password: hashedPassword,
       role: "admin",
-      isVerified: true,
+      isEmailVerified: true,
     });
-
-    console.log("✅ Admin created successfully:");
-    console.log(admin);
+    console.log("✅ Admin created:", admin.email);
 
     process.exit();
   } catch (err) {
