@@ -61,17 +61,27 @@ exports.getSinglePlan = async (req, res) => {
 exports.subscribePlan = async (req, res) => {
   try {
     const userId = req.user.id;
-
     const { planId, billingCycle } = req.body;
 
-    const plan = await MembershipPlan.findById(
-      planId
-    );
+    const plan = await MembershipPlan.findById(planId);
 
     if (!plan) {
       return res.status(404).json({
         success: false,
         message: "Membership plan not found",
+      });
+    }
+
+    // ❗ Prevent duplicate active subscription
+    const existing = await Subscription.findOne({
+      userId,
+      status: "active",
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "You already have an active subscription",
       });
     }
 
@@ -81,30 +91,24 @@ exports.subscribePlan = async (req, res) => {
         : plan.monthlyPrice;
 
     const startsAt = new Date();
-
     const expiresAt = new Date();
 
     if (billingCycle === "yearly") {
-      expiresAt.setFullYear(
-        expiresAt.getFullYear() + 1
-      );
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
     } else {
-      expiresAt.setMonth(
-        expiresAt.getMonth() + 1
-      );
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
     }
 
-    const subscription =
-      await Subscription.create({
-        userId,
-        planId,
-        billingCycle,
-        amount,
-        status: "active",
-        paymentStatus: "paid",
-        startsAt,
-        expiresAt,
-      });
+    const subscription = await Subscription.create({
+      userId,
+      planId,
+      billingCycle,
+      amount,
+      status: "active",
+      paymentStatus: "paid", // ⚠️ only OK for testing
+      startsAt,
+      expiresAt,
+    });
 
     await User.findByIdAndUpdate(userId, {
       membership: {
@@ -119,8 +123,7 @@ exports.subscribePlan = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message:
-        "Membership subscribed successfully",
+      message: "Membership subscribed successfully",
       data: subscription,
     });
   } catch (error) {
@@ -130,35 +133,11 @@ exports.subscribePlan = async (req, res) => {
     });
   }
 };
-
 // ======================================
 // GET MY SUBSCRIPTION
 // ======================================
 
-exports.getMySubscription = async (
-  req,
-  res
-) => {
-  try {
-    const subscription =
-      await Subscription.findOne({
-        userId: req.user.id,
-        status: "active",
-      })
-        .populate("planId")
-        .sort({ createdAt: -1 });
 
-    return res.status(200).json({
-      success: true,
-      data: subscription,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
 
 // ======================================
 // CANCEL SUBSCRIPTION

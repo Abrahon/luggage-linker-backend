@@ -19,10 +19,11 @@ const subscriptionSchema = new mongoose.Schema(
       ref: "Payment",
     },
 
-    subscriptionCode: {
-      type: String,
-      unique: true,
-    },
+  subscriptionCode: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
 
     billingCycle: {
       type: String,

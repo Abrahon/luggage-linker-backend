@@ -34,12 +34,7 @@ router.post(
   membershipController.subscribePlan
 );
 
-// My subscription
-router.get(
-  "/my-subscription",
-  authMiddleware,
-  membershipController.getMySubscription
-);
+
 
 // Cancel subscription
 router.patch(
